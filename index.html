@@ -11,6 +11,7 @@
             background: linear-gradient(to bottom, #87CEEB, #98FB98);
             font-family: Arial, sans-serif;
             overflow: hidden;
+            touch-action: none; /* Prevent default touch behaviors */
         }
 
         #gameContainer {
@@ -59,6 +60,20 @@
             z-index: 100;
         }
 
+        #touchInstructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+            text-align: center;
+        }
+
         button {
             background: #4CAF50;
             color: white;
@@ -86,10 +101,16 @@
         </div>
 
         <div id="instructions">
-            <div>Use WASD Keys:</div>
+            <div>Keyboard Controls:</div>
             <div>A D Switch lanes</div>
             <div>W Jump</div>
             <div>S Slide</div>
+        </div>
+
+        <div id="touchInstructions">
+            <div>Touch Controls:</div>
+            <div>Swipe Left/Right: Switch lanes</div>
+            <div>Tap: Jump • Swipe Down: Slide</div>
         </div>
 
         <div id="gameOver">
@@ -141,6 +162,13 @@
         let coinObjects = [];
         let groundLines = [];
 
+        // Touch control variables
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        const swipeThreshold = 50; // Minimum distance for a swipe
+        const tapTimeThreshold = 200; // Maximum time for a tap (ms)
+
         // Initialize ground lines for visual effect
         for (let i = 0; i < 10; i++) {
             groundLines.push({
@@ -151,7 +179,7 @@
             });
         }
 
-        // Input handling
+        // Keyboard input handling
         const keys = {};
         
         document.addEventListener('keydown', (e) => {
@@ -161,30 +189,16 @@
             
             switch(e.key.toLowerCase()) {
                 case 'a':
-                    if (player.lane > 0) {
-                        player.lane--;
-                        player.x = lanes[player.lane];
-                    }
+                    moveLeft();
                     break;
                 case 'd':
-                    if (player.lane < 2) {
-                        player.lane++;
-                        player.x = lanes[player.lane];
-                    }
+                    moveRight();
                     break;
                 case 'w':
-                    if (!player.isJumping && !player.isSliding) {
-                        player.isJumping = true;
-                        player.jumpSpeed = -15;
-                    }
+                    jump();
                     break;
                 case 's':
-                    if (!player.isJumping && !player.isSliding) {
-                        player.isSliding = true;
-                        setTimeout(() => {
-                            player.isSliding = false;
-                        }, 500);
-                    }
+                    slide();
                     break;
             }
         });
@@ -192,6 +206,93 @@
         document.addEventListener('keyup', (e) => {
             keys[e.key] = false;
         });
+
+        // Touch event handlers
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            touchStartTime = Date.now();
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (!gameRunning) return;
+
+            const touch = e.changedTouches[0];
+            const touchEndX = touch.clientX;
+            const touchEndY = touch.clientY;
+            const touchEndTime = Date.now();
+
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const deltaTime = touchEndTime - touchStartTime;
+
+            const absDeltaX = Math.abs(deltaX);
+            const absDeltaY = Math.abs(deltaY);
+
+            // Check if it's a tap (short duration and small movement)
+            if (deltaTime < tapTimeThreshold && absDeltaX < 30 && absDeltaY < 30) {
+                jump();
+                return;
+            }
+
+            // Check for swipes
+            if (absDeltaX > swipeThreshold || absDeltaY > swipeThreshold) {
+                if (absDeltaX > absDeltaY) {
+                    // Horizontal swipe
+                    if (deltaX > 0) {
+                        moveRight(); // Swipe right
+                    } else {
+                        moveLeft(); // Swipe left
+                    }
+                } else {
+                    // Vertical swipe
+                    if (deltaY > 0) {
+                        slide(); // Swipe down
+                    } else {
+                        jump(); // Swipe up
+                    }
+                }
+            }
+        }, { passive: false });
+
+        // Prevent context menu on long press
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Game action functions
+        function moveLeft() {
+            if (player.lane > 0) {
+                player.lane--;
+                player.x = lanes[player.lane];
+            }
+        }
+
+        function moveRight() {
+            if (player.lane < 2) {
+                player.lane++;
+                player.x = lanes[player.lane];
+            }
+        }
+
+        function jump() {
+            if (!player.isJumping && !player.isSliding) {
+                player.isJumping = true;
+                player.jumpSpeed = -15;
+            }
+        }
+
+        function slide() {
+            if (!player.isJumping && !player.isSliding) {
+                player.isSliding = true;
+                setTimeout(() => {
+                    player.isSliding = false;
+                }, 500);
+            }
+        }
 
         // Create obstacle
         function createObstacle() {
