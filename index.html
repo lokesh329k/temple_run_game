@@ -262,6 +262,7 @@
                     <div class="character" data-char="superhero" onclick="selectCharacter('superhero')">🦸‍♂️</div>
                 </div>
             </div>
+            <div id="characterPreview" style="font-size:48px; margin:15px;">🏃‍♂️</div>
             
             <div class="controls-info">
                 <h3>📱 Mobile: Tap screen areas</h3>
@@ -286,10 +287,12 @@
                 <div>Score: <span id="score">0</span></div>
                 <div>Coins: <span id="coins">0</span></div>
             </div>
+            <div id="characterPreview" style="font-size:48px; margin:15px;">🏃‍♂️</div>
             <div class="ui-panel">
                 <div>Speed: <span id="speed">5</span></div>
                 <div>Combo: <span id="combo">0</span>x</div>
             </div>
+            <div id="characterPreview" style="font-size:48px; margin:15px;">🏃‍♂️</div>
         </div>
 
         <div id="powerUps"></div>
@@ -313,6 +316,11 @@
         function initAudio() {
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        document.addEventListener('click', () => {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        });
             } catch (e) {
                 console.log('Audio not supported');
             }
@@ -442,6 +450,7 @@
             player.color = char.color;
             
             playSound(800, 0.1);
+            document.getElementById('characterPreview').textContent = char.emoji;
         }
 
         // Touch handling
@@ -528,7 +537,7 @@
             gameStarted = true;
             
             player.x = lanes[1];
-            player.y = canvas.height - 150;
+            player.y = canvas.height - player.height - 50;
             
             playSound(880, 0.3);
         }
