@@ -287,12 +287,10 @@
                 <div>Score: <span id="score">0</span></div>
                 <div>Coins: <span id="coins">0</span></div>
             </div>
-            <div id="characterPreview" style="font-size:48px; margin:15px;">🏃‍♂️</div>
             <div class="ui-panel">
                 <div>Speed: <span id="speed">5</span></div>
                 <div>Combo: <span id="combo">0</span>x</div>
             </div>
-            <div id="characterPreview" style="font-size:48px; margin:15px;">🏃‍♂️</div>
         </div>
 
         <div id="powerUps"></div>
@@ -316,11 +314,11 @@
         function initAudio() {
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        document.addEventListener('click', () => {
-            if (audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-        });
+                document.addEventListener('click', () => {
+                    if (audioContext.state === 'suspended') {
+                        audioContext.resume();
+                    }
+                });
             } catch (e) {
                 console.log('Audio not supported');
             }
@@ -358,22 +356,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            
-            lanes[0] = canvas.width / 2 - 80;
-            lanes[1] = canvas.width / 2;
-            lanes[2] = canvas.width / 2 + 80;
-            
-            if (player) {
-                player.x = lanes[player.lane];
-            }
-        }
-
-        resizeCanvas();
-
-        // Game variables
+        // Game variables - Initialize these FIRST
         let gameRunning = false;
         let gameStarted = false;
         let score = 0;
@@ -382,7 +365,10 @@
         let frameCount = 0;
         let combo = 0;
         let maxCombo = 0;
-        let selectedCharacter = 'runner';
+        let selectedCharacter = 'runner'; // Initialize this early!
+
+        // Lane positions - Initialize this BEFORE calling resizeCanvas
+        let lanes = [0, 0, 0];
 
         // Character definitions
         const characters = {
@@ -411,9 +397,6 @@
             speedBoost: false
         };
 
-        // Lane positions
-        let lanes = [0, 0, 0];
-
         // Game arrays
         let obstacles = [];
         let coinObjects = [];
@@ -429,6 +412,23 @@
             { type: 'speed', emoji: '⚡', color: '#FFEB3B' },
             { type: 'star', emoji: '🌟', color: '#FF9800' }
         ];
+
+        // NOW we can call resizeCanvas after lanes is initialized
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            lanes[0] = canvas.width / 2 - 80;
+            lanes[1] = canvas.width / 2;
+            lanes[2] = canvas.width / 2 + 80;
+            
+            if (player) {
+                player.x = lanes[player.lane];
+            }
+        }
+
+        // Call resizeCanvas AFTER lanes is initialized
+        resizeCanvas();
 
         // Initialize ground lines
         for (let i = 0; i < 12; i++) {
@@ -519,12 +519,16 @@
             
             const keyActions = {
                 'a': 'left',
+                'A': 'left',
                 'd': 'right',
+                'D': 'right',
                 'w': 'jump',
-                's': 'slide'
+                'W': 'jump',
+                's': 'slide',
+                'S': 'slide'
             };
             
-            const action = keyActions[e.key.toLowerCase()];
+            const action = keyActions[e.key];
             if (action) handleAction(action);
         });
 
@@ -716,7 +720,9 @@
                             player.magnetRange = 0;
                             break;
                         case 'shield':
-                            if (powerUp.type !== 'star') player.invulnerable = false;
+                            if (activePowerUps.filter(p => p.type === 'star').length === 0) {
+                                player.invulnerable = false;
+                            }
                             break;
                         case 'speed':
                             player.speedBoost = false;
