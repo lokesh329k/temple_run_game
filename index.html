@@ -265,8 +265,12 @@
             <div id="characterPreview" style="font-size:48px; margin:15px;">🏃‍♂️</div>
             
             <div class="controls-info">
-                <h3>📱 Mobile: Tap screen areas</h3>
-                <p>⌨️ Desktop: WASD keys</p>
+                <h3>📱 Mobile Controls:</h3>
+                <p>👈👉 Swipe left/right to move</p>
+                <p>👆 Swipe up to jump</p>
+                <p>👇 Swipe down to slide</p>
+                <p>Or tap screen areas</p>
+                <h3>⌨️ Desktop: WASD keys</h3>
                 <h3>🎯 Power-ups:</h3>
                 <p>🧲 Magnet • 🛡️ Shield • ⚡ Speed • 🌟 Star</p>
             </div>
@@ -453,22 +457,112 @@
             document.getElementById('characterPreview').textContent = char.emoji;
         }
 
-        // Touch handling
+        // Touch and swipe handling
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        const minSwipeDistance = 30;
+        const maxSwipeTime = 300;
+
         function setupTouchControls() {
+            // Zone tapping (backup method)
             const zones = ['leftZone', 'rightZone', 'jumpZone', 'slideZone'];
             const actions = ['left', 'right', 'jump', 'slide'];
             
             zones.forEach((zoneId, index) => {
                 const zone = document.getElementById(zoneId);
-                zone.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    if (gameRunning) handleAction(actions[index]);
-                });
                 zone.addEventListener('click', (e) => {
                     e.preventDefault();
                     if (gameRunning) handleAction(actions[index]);
                 });
             });
+
+            // Main swipe detection on canvas
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            // Also add to the game container as backup
+            document.getElementById('gameContainer').addEventListener('touchstart', handleTouchStart, { passive: false });
+            document.getElementById('gameContainer').addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.getElementById('gameContainer').addEventListener('touchend', handleTouchEnd, { passive: false });
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            if (!gameRunning) return;
+            
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            touchStartTime = Date.now();
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            if (!gameRunning) return;
+            
+            const touch = e.changedTouches[0];
+            const touchEndX = touch.clientX;
+            const touchEndY = touch.clientY;
+            const touchEndTime = Date.now();
+            
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const deltaTime = touchEndTime - touchStartTime;
+            
+            // Check if it's a valid swipe (not too long duration)
+            if (deltaTime > maxSwipeTime) return;
+            
+            const absDeltaX = Math.abs(deltaX);
+            const absDeltaY = Math.abs(deltaY);
+            
+            // Horizontal swipes (left/right movement)
+            if (absDeltaX > absDeltaY && absDeltaX > minSwipeDistance) {
+                if (deltaX > 0) {
+                    handleAction('right');
+                } else {
+                    handleAction('left');
+                }
+            }
+            // Vertical swipes (jump/slide)
+            else if (absDeltaY > absDeltaX && absDeltaY > minSwipeDistance) {
+                if (deltaY < 0) {
+                    handleAction('jump'); // Swipe up = jump
+                } else {
+                    handleAction('slide'); // Swipe down = slide
+                }
+            }
+            // Short taps in different areas (fallback)
+            else if (absDeltaX < minSwipeDistance && absDeltaY < minSwipeDistance) {
+                const screenWidth = window.innerWidth;
+                const screenHeight = window.innerHeight;
+                
+                // Tap in upper area = jump
+                if (touchStartY < screenHeight * 0.4) {
+                    handleAction('jump');
+                }
+                // Tap in lower area = slide  
+                else if (touchStartY > screenHeight * 0.7) {
+                    handleAction('slide');
+                }
+                // Tap on left side = move left
+                else if (touchStartX < screenWidth * 0.3) {
+                    handleAction('left');
+                }
+                // Tap on right side = move right
+                else if (touchStartX > screenWidth * 0.7) {
+                    handleAction('right');
+                }
+                // Tap in center = jump
+                else {
+                    handleAction('jump');
+                }
+            }
         }
 
         function handleAction(action) {
