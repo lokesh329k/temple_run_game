@@ -7,21 +7,25 @@
     <meta name="theme-color" content="#4CAF50">
     <style>
         * {
+            box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
+            margin: 0;
+            padding: 0;
         }
 
         body {
             margin: 0;
             padding: 0;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             overflow: hidden;
             position: fixed;
             width: 100%;
             height: 100%;
+            touch-action: none;
         }
 
         #gameContainer {
@@ -36,6 +40,7 @@
             background: linear-gradient(to bottom, #8FBC8F, #228B22);
             flex: 1;
             touch-action: none;
+            display: block;
         }
 
         #startScreen {
@@ -47,50 +52,61 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             z-index: 300;
             color: white;
             text-align: center;
+            overflow-y: auto;
+            padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top));
         }
 
         .game-title {
-            font-size: clamp(24px, 6vw, 36px);
+            font-size: clamp(20px, 5vw, 32px);
             font-weight: bold;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            line-height: 1.2;
         }
 
         .character-selection {
             background: rgba(0, 0, 0, 0.3);
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
-            margin: 10px;
+            margin: 10px 0;
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .character-selection h3 {
+            margin: 0 0 10px 0;
+            font-size: clamp(14px, 4vw, 18px);
         }
 
         .characters {
-            display: flex;
-            gap: 15px;
-            margin: 15px 0;
-            flex-wrap: wrap;
-            justify-content: center;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 10px 0;
         }
 
         .character {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             border: 3px solid transparent;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 20px;
             background: rgba(255, 255, 255, 0.2);
             transition: all 0.3s ease;
+            margin: 0 auto;
         }
 
-        .character:hover {
+        .character:hover, .character:active {
             transform: scale(1.1);
         }
 
@@ -100,89 +116,44 @@
             transform: scale(1.1);
         }
 
-        #ui {
-            position: absolute;
-            top: env(safe-area-inset-top, 10px);
-            left: 10px;
-            right: 10px;
-            color: white;
-            font-size: clamp(14px, 3.5vw, 18px);
-            z-index: 100;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-        }
-
-        .ui-panel {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 8px 12px;
-            border-radius: 8px;
-            backdrop-filter: blur(5px);
-        }
-
-        #gameOver {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            display: none;
-            z-index: 200;
-            max-width: 90vw;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        #powerUps {
-            position: absolute;
-            top: 80px;
-            right: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            z-index: 100;
-        }
-
-        .power-up-indicator {
-            background: rgba(255, 215, 0, 0.9);
-            color: #333;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            animation: pulse 2s infinite;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+        #characterPreview {
+            font-size: 36px;
+            margin: 10px 0;
         }
 
         .controls-info {
             background: rgba(0, 0, 0, 0.3);
-            padding: 15px;
+            padding: 12px;
             border-radius: 10px;
-            margin: 10px;
-            max-width: 280px;
-            font-size: 14px;
+            margin: 10px 0;
+            width: 100%;
+            max-width: 350px;
+            font-size: clamp(12px, 3vw, 14px);
+        }
+
+        .controls-info h3 {
+            margin: 0 0 5px 0;
+            font-size: clamp(14px, 3.5vw, 16px);
+        }
+
+        .controls-info p {
+            margin: 3px 0;
+            line-height: 1.3;
         }
 
         button {
             background: linear-gradient(45deg, #4CAF50, #45a049);
             color: white;
             border: none;
-            padding: 12px 24px;
-            font-size: 16px;
+            padding: 15px 30px;
+            font-size: clamp(14px, 4vw, 18px);
             border-radius: 8px;
             cursor: pointer;
-            margin: 8px;
+            margin: 10px;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            font-weight: bold;
+            min-height: 48px; /* Better touch target */
         }
 
         button:hover, button:active {
@@ -193,16 +164,86 @@
 
         .sound-btn {
             position: absolute;
-            top: 20px;
+            top: max(20px, env(safe-area-inset-top));
             right: 20px;
             background: rgba(255, 255, 255, 0.2);
             border: none;
             color: white;
-            padding: 10px;
+            padding: 12px;
             border-radius: 50%;
             cursor: pointer;
             font-size: 18px;
             z-index: 250;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #ui {
+            position: absolute;
+            top: max(10px, env(safe-area-inset-top));
+            left: 10px;
+            right: 10px;
+            color: white;
+            font-size: clamp(12px, 3vw, 16px);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+
+        .ui-panel {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 10px;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 200;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #powerUps {
+            position: absolute;
+            top: max(60px, env(safe-area-inset-top) + 50px);
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 100;
+        }
+
+        .power-up-indicator {
+            background: rgba(255, 215, 0, 0.9);
+            color: #333;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 10px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .combo-display {
@@ -211,7 +252,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: #FFD700;
-            font-size: 24px;
+            font-size: clamp(18px, 5vw, 24px);
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             pointer-events: none;
@@ -225,20 +266,82 @@
             100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
         }
 
-        /* Touch zones for mobile */
+        /* Touch zones for mobile - make them visible for debugging */
         .touch-zone {
             position: absolute;
             pointer-events: all;
             opacity: 0;
+            z-index: 50;
         }
 
-        #leftZone { left: 0; top: 0; width: 25%; height: 70%; }
-        #rightZone { right: 0; top: 0; width: 25%; height: 70%; }
-        #jumpZone { left: 25%; top: 0; width: 50%; height: 35%; }
-        #slideZone { left: 25%; bottom: 30%; width: 50%; height: 35%; }
+        #leftZone { 
+            left: 0; 
+            top: 0; 
+            width: 25%; 
+            height: 60%; 
+        }
+        
+        #rightZone { 
+            right: 0; 
+            top: 0; 
+            width: 25%; 
+            height: 60%; 
+        }
+        
+        #jumpZone { 
+            left: 25%; 
+            top: 0; 
+            width: 50%; 
+            height: 35%; 
+        }
+        
+        #slideZone { 
+            left: 25%; 
+            bottom: 40%; 
+            width: 50%; 
+            height: 25%; 
+        }
 
+        /* Show touch zones on mobile for better UX */
         @media (max-width: 768px) {
-            .touch-zone { opacity: 0.1; background: rgba(255,255,255,0.1); }
+            .touch-zone { 
+                opacity: 0.05; 
+                background: rgba(255,255,255,0.1); 
+                border: 1px solid rgba(255,255,255,0.2);
+            }
+            
+            /* Improve mobile layout */
+            .characters {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            
+            .character {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+        }
+
+        @media (max-height: 600px) {
+            #startScreen {
+                padding: 10px;
+            }
+            
+            .game-title {
+                font-size: clamp(18px, 4vw, 24px);
+                margin-bottom: 10px;
+            }
+            
+            .character-selection {
+                padding: 10px;
+                margin: 5px 0;
+            }
+            
+            .controls-info {
+                padding: 8px;
+                margin: 5px 0;
+            }
         }
     </style>
 </head>
@@ -262,14 +365,13 @@
                     <div class="character" data-char="superhero" onclick="selectCharacter('superhero')">🦸‍♂️</div>
                 </div>
             </div>
-            <div id="characterPreview" style="font-size:48px; margin:15px;">🏃‍♂️</div>
+            <div id="characterPreview">🏃‍♂️</div>
             
             <div class="controls-info">
                 <h3>📱 Mobile Controls:</h3>
-                <p>👈👉 Swipe left/right to move</p>
-                <p>👆 Swipe up to jump</p>
-                <p>👇 Swipe down to slide</p>
-                <p>Or tap screen areas</p>
+                <p>👈👉 Swipe or tap sides to move</p>
+                <p>👆 Swipe/tap top to jump</p>
+                <p>👇 Swipe/tap bottom to slide</p>
                 <h3>⌨️ Desktop: WASD keys</h3>
                 <h3>🎯 Power-ups:</h3>
                 <p>🧲 Magnet • 🛡️ Shield • ⚡ Speed • 🌟 Star</p>
@@ -281,10 +383,10 @@
         <canvas id="gameCanvas"></canvas>
         
         <!-- Touch Control Zones -->
-        <div class="touch-zone" id="leftZone"></div>
-        <div class="touch-zone" id="rightZone"></div>
-        <div class="touch-zone" id="jumpZone"></div>
-        <div class="touch-zone" id="slideZone"></div>
+        <div class="touch-zone" id="leftZone" title="Move Left"></div>
+        <div class="touch-zone" id="rightZone" title="Move Right"></div>
+        <div class="touch-zone" id="jumpZone" title="Jump"></div>
+        <div class="touch-zone" id="slideZone" title="Slide"></div>
         
         <div id="ui">
             <div class="ui-panel">
@@ -318,13 +420,19 @@
         function initAudio() {
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                document.addEventListener('click', () => {
-                    if (audioContext.state === 'suspended') {
+                // Resume audio context on first user interaction
+                const resumeAudio = () => {
+                    if (audioContext && audioContext.state === 'suspended') {
                         audioContext.resume();
                     }
-                });
+                    document.removeEventListener('touchstart', resumeAudio);
+                    document.removeEventListener('click', resumeAudio);
+                };
+                document.addEventListener('touchstart', resumeAudio);
+                document.addEventListener('click', resumeAudio);
             } catch (e) {
                 console.log('Audio not supported');
+                soundEnabled = false;
             }
         }
 
@@ -341,13 +449,13 @@
                 oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
                 oscillator.type = type;
                 
-                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
                 
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + duration);
             } catch (e) {
-                console.log('Sound play failed');
+                console.log('Sound play failed:', e);
             }
         }
 
@@ -360,7 +468,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Game variables - Initialize these FIRST
+        // Game variables
         let gameRunning = false;
         let gameStarted = false;
         let score = 0;
@@ -369,9 +477,9 @@
         let frameCount = 0;
         let combo = 0;
         let maxCombo = 0;
-        let selectedCharacter = 'runner'; // Initialize this early!
+        let selectedCharacter = 'runner';
 
-        // Lane positions - Initialize this BEFORE calling resizeCanvas
+        // Lane positions
         let lanes = [0, 0, 0];
 
         // Character definitions
@@ -417,32 +525,48 @@
             { type: 'star', emoji: '🌟', color: '#FF9800' }
         ];
 
-        // NOW we can call resizeCanvas after lanes is initialized
         function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
             
-            lanes[0] = canvas.width / 2 - 80;
-            lanes[1] = canvas.width / 2;
-            lanes[2] = canvas.width / 2 + 80;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
             
-            if (player) {
+            // Scale the context to match device pixel ratio
+            ctx.scale(dpr, dpr);
+            
+            // Set CSS size
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            
+            // Update lane positions based on actual canvas size
+            const canvasWidth = rect.width;
+            lanes[0] = canvasWidth / 2 - 80;
+            lanes[1] = canvasWidth / 2;
+            lanes[2] = canvasWidth / 2 + 80;
+            
+            if (player && gameStarted) {
                 player.x = lanes[player.lane];
             }
         }
 
-        // Call resizeCanvas AFTER lanes is initialized
+        // Initialize
         resizeCanvas();
 
         // Initialize ground lines
-        for (let i = 0; i < 12; i++) {
-            groundLines.push({
-                x: Math.random() * window.innerWidth,
-                y: i * 80,
-                width: 150 + Math.random() * 100,
-                height: 2
-            });
+        function initGroundLines() {
+            groundLines = [];
+            for (let i = 0; i < 12; i++) {
+                groundLines.push({
+                    x: Math.random() * canvas.clientWidth,
+                    y: i * 80,
+                    width: 150 + Math.random() * 100,
+                    height: 2
+                });
+            }
         }
+
+        initGroundLines();
 
         // Character selection
         function selectCharacter(charType) {
@@ -461,31 +585,51 @@
         let touchStartX = 0;
         let touchStartY = 0;
         let touchStartTime = 0;
-        const minSwipeDistance = 30;
-        const maxSwipeTime = 300;
+        const minSwipeDistance = 50;
+        const maxSwipeTime = 500;
 
         function setupTouchControls() {
-            // Zone tapping (backup method)
-            const zones = ['leftZone', 'rightZone', 'jumpZone', 'slideZone'];
-            const actions = ['left', 'right', 'jump', 'slide'];
+            // Prevent default touch behaviors
+            document.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+            document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+            document.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
+
+            // Zone tapping
+            const zones = [
+                { id: 'leftZone', action: 'left' },
+                { id: 'rightZone', action: 'right' },
+                { id: 'jumpZone', action: 'jump' },
+                { id: 'slideZone', action: 'slide' }
+            ];
             
-            zones.forEach((zoneId, index) => {
-                const zone = document.getElementById(zoneId);
-                zone.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    if (gameRunning) handleAction(actions[index]);
-                });
+            zones.forEach(({ id, action }) => {
+                const zone = document.getElementById(id);
+                if (zone) {
+                    // Touch events for mobile
+                    zone.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (gameRunning) {
+                            handleAction(action);
+                        }
+                    }, { passive: false });
+                    
+                    // Click events for desktop/testing
+                    zone.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (gameRunning) {
+                            handleAction(action);
+                        }
+                    });
+                }
             });
 
-            // Main swipe detection on canvas
-            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+            // Main swipe detection
+            const gameContainer = document.getElementById('gameContainer');
             
-            // Also add to the game container as backup
-            document.getElementById('gameContainer').addEventListener('touchstart', handleTouchStart, { passive: false });
-            document.getElementById('gameContainer').addEventListener('touchmove', handleTouchMove, { passive: false });
-            document.getElementById('gameContainer').addEventListener('touchend', handleTouchEnd, { passive: false });
+            gameContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+            gameContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+            gameContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
         }
 
         function handleTouchStart(e) {
@@ -515,13 +659,13 @@
             const deltaY = touchEndY - touchStartY;
             const deltaTime = touchEndTime - touchStartTime;
             
-            // Check if it's a valid swipe (not too long duration)
+            // Check if it's a valid swipe
             if (deltaTime > maxSwipeTime) return;
             
             const absDeltaX = Math.abs(deltaX);
             const absDeltaY = Math.abs(deltaY);
             
-            // Horizontal swipes (left/right movement)
+            // Horizontal swipes
             if (absDeltaX > absDeltaY && absDeltaX > minSwipeDistance) {
                 if (deltaX > 0) {
                     handleAction('right');
@@ -529,38 +673,12 @@
                     handleAction('left');
                 }
             }
-            // Vertical swipes (jump/slide)
+            // Vertical swipes
             else if (absDeltaY > absDeltaX && absDeltaY > minSwipeDistance) {
                 if (deltaY < 0) {
-                    handleAction('jump'); // Swipe up = jump
+                    handleAction('jump');
                 } else {
-                    handleAction('slide'); // Swipe down = slide
-                }
-            }
-            // Short taps in different areas (fallback)
-            else if (absDeltaX < minSwipeDistance && absDeltaY < minSwipeDistance) {
-                const screenWidth = window.innerWidth;
-                const screenHeight = window.innerHeight;
-                
-                // Tap in upper area = jump
-                if (touchStartY < screenHeight * 0.4) {
-                    handleAction('jump');
-                }
-                // Tap in lower area = slide  
-                else if (touchStartY > screenHeight * 0.7) {
                     handleAction('slide');
-                }
-                // Tap on left side = move left
-                else if (touchStartX < screenWidth * 0.3) {
-                    handleAction('left');
-                }
-                // Tap on right side = move right
-                else if (touchStartX > screenWidth * 0.7) {
-                    handleAction('right');
-                }
-                // Tap in center = jump
-                else {
-                    handleAction('jump');
                 }
             }
         }
@@ -612,14 +730,10 @@
             }
             
             const keyActions = {
-                'a': 'left',
-                'A': 'left',
-                'd': 'right',
-                'D': 'right',
-                'w': 'jump',
-                'W': 'jump',
-                's': 'slide',
-                'S': 'slide'
+                'a': 'left', 'A': 'left',
+                'd': 'right', 'D': 'right',
+                'w': 'jump', 'W': 'jump',
+                's': 'slide', 'S': 'slide'
             };
             
             const action = keyActions[e.key];
@@ -635,7 +749,7 @@
             gameStarted = true;
             
             player.x = lanes[1];
-            player.y = canvas.height - player.height - 50;
+            player.y = canvas.clientHeight - player.height - 50;
             
             playSound(880, 0.3);
         }
@@ -653,6 +767,7 @@
             speed = 5;
             frameCount = 0;
             combo = 0;
+            maxCombo = 0;
             obstacles = [];
             coinObjects = [];
             powerUpObjects = [];
@@ -669,6 +784,8 @@
             player.magnetRange = 0;
             player.speedBoost = false;
             player.color = char.color;
+            
+            initGroundLines();
         }
 
         function restartGame() {
@@ -678,7 +795,7 @@
             playSound(880, 0.3);
         }
 
-        // Game object creation
+        // Game object creation functions
         function createObstacle() {
             const lane = Math.floor(Math.random() * 3);
             const types = ['block', 'spike', 'barrier'];
@@ -850,9 +967,9 @@
             // Move ground
             groundLines.forEach(line => {
                 line.y += speed;
-                if (line.y > canvas.height) {
+                if (line.y > canvas.clientHeight) {
                     line.y = -20;
-                    line.x = Math.random() * canvas.width;
+                    line.x = Math.random() * canvas.clientWidth;
                 }
             });
 
@@ -865,7 +982,7 @@
             obstacles.forEach((obstacle, index) => {
                 obstacle.y += speed;
                 
-                if (obstacle.y > canvas.height) {
+                if (obstacle.y > canvas.clientHeight) {
                     obstacles.splice(index, 1);
                     combo = Math.max(0, combo - 1);
                     return;
@@ -904,7 +1021,7 @@
                     }
                 }
                 
-                if (coin.y > canvas.height) {
+                if (coin.y > canvas.clientHeight) {
                     coinObjects.splice(index, 1);
                     return;
                 }
@@ -925,7 +1042,7 @@
                 powerUp.y += speed;
                 powerUp.pulse += 0.1;
                 
-                if (powerUp.y > canvas.height) {
+                if (powerUp.y > canvas.clientHeight) {
                     powerUpObjects.splice(index, 1);
                     return;
                 }
@@ -973,7 +1090,10 @@
         }
 
         function render() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const canvasWidth = canvas.clientWidth;
+            const canvasHeight = canvas.clientHeight;
+            
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
             // Draw ground lines
             ctx.strokeStyle = '#654321';
@@ -992,22 +1112,21 @@
             for (let i = 0; i < 3; i++) {
                 ctx.beginPath();
                 ctx.moveTo(lanes[i] - 35, 0);
-                ctx.lineTo(lanes[i] - 35, canvas.height);
+                ctx.lineTo(lanes[i] - 35, canvasHeight);
                 ctx.stroke();
                 
                 ctx.beginPath();
                 ctx.moveTo(lanes[i] + 35, 0);
-                ctx.lineTo(lanes[i] + 35, canvas.height);
+                ctx.lineTo(lanes[i] + 35, canvasHeight);
                 ctx.stroke();
             }
             ctx.setLineDash([]);
 
-            // Draw obstacles with enhanced graphics
+            // Draw obstacles
             obstacles.forEach(obstacle => {
                 ctx.save();
                 
                 if (obstacle.type === 'block') {
-                    // 3D block effect
                     const gradient = ctx.createLinearGradient(
                         obstacle.x - obstacle.width/2, obstacle.y,
                         obstacle.x + obstacle.width/2, obstacle.y + obstacle.height
@@ -1019,13 +1138,11 @@
                     ctx.fillStyle = gradient;
                     ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y, obstacle.width, obstacle.height);
                     
-                    // Add highlights
                     ctx.fillStyle = 'rgba(255,255,255,0.3)';
                     ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y, obstacle.width, 5);
                     ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y, 3, obstacle.height);
                     
                 } else if (obstacle.type === 'spike') {
-                    // Enhanced spike
                     const gradient = ctx.createLinearGradient(
                         obstacle.x, obstacle.y,
                         obstacle.x, obstacle.y + obstacle.height
@@ -1041,7 +1158,6 @@
                     ctx.closePath();
                     ctx.fill();
                     
-                    // Add shine
                     ctx.fillStyle = 'rgba(255,255,255,0.4)';
                     ctx.beginPath();
                     ctx.moveTo(obstacle.x, obstacle.y);
@@ -1050,7 +1166,6 @@
                     ctx.fill();
                     
                 } else if (obstacle.type === 'barrier') {
-                    // Barrier obstacle
                     ctx.fillStyle = '#666666';
                     ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y, obstacle.width, obstacle.height);
                     
@@ -1068,14 +1183,13 @@
                 ctx.restore();
             });
 
-            // Draw coins with enhanced effects
+            // Draw coins
             coinObjects.forEach(coin => {
                 if (!coin.collected) {
                     ctx.save();
                     ctx.translate(coin.x, coin.y + coin.height/2);
                     ctx.rotate(coin.rotation);
                     
-                    // Coin base
                     const coinGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, coin.width/2);
                     if (coin.special) {
                         coinGradient.addColorStop(0, '#FFD700');
@@ -1092,13 +1206,11 @@
                     ctx.arc(0, 0, coin.width/2, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Coin highlight
                     ctx.fillStyle = 'rgba(255,255,255,0.8)';
                     ctx.beginPath();
                     ctx.arc(-coin.width/4, -coin.width/4, coin.width/5, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Special coin effect
                     if (coin.special) {
                         ctx.strokeStyle = '#FF9800';
                         ctx.lineWidth = 2;
@@ -1113,7 +1225,7 @@
                 }
             });
 
-            // Draw power-ups with pulsing effect
+            // Draw power-ups
             powerUpObjects.forEach(powerUp => {
                 if (!powerUp.collected) {
                     ctx.save();
@@ -1122,7 +1234,6 @@
                     ctx.translate(powerUp.x, powerUp.y + powerUp.height/2);
                     ctx.scale(pulseScale, pulseScale);
                     
-                    // Power-up glow
                     const glowGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, powerUp.width);
                     glowGradient.addColorStop(0, powerUp.color + '80');
                     glowGradient.addColorStop(1, powerUp.color + '00');
@@ -1132,13 +1243,11 @@
                     ctx.arc(0, 0, powerUp.width, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Power-up base
                     ctx.fillStyle = powerUp.color;
                     ctx.beginPath();
                     ctx.arc(0, 0, powerUp.width/2.5, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Power-up icon (simplified)
                     ctx.fillStyle = 'white';
                     ctx.font = '16px Arial';
                     ctx.textAlign = 'center';
@@ -1160,7 +1269,7 @@
                 ctx.restore();
             });
 
-            // Draw player with character-specific appearance
+            // Draw player
             const char = characters[selectedCharacter];
             let playerY = player.y - player.jumpHeight;
             let playerHeight = player.height;
@@ -1253,7 +1362,10 @@
 
         // Initialize
         setupTouchControls();
-        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initGroundLines();
+        });
         
         // Start game loop
         gameLoop();
