@@ -538,6 +538,10 @@
             // Set CSS size
             canvas.style.width = rect.width + 'px';
             canvas.style.height = rect.height + 'px';
+
+            // Store the actual display dimensions for touch calculations
+canvas.displayWidth = rect.width;
+canvas.displayHeight = rect.height;
             
             // Update lane positions based on actual canvas size
             const canvasWidth = rect.width;
@@ -590,9 +594,10 @@
 
         function setupTouchControls() {
             // Prevent default touch behaviors
-            document.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-            document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-            document.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
+            // Only prevent default on the game canvas area, not globally
+canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
 
             // Zone tapping
             const zones = [
@@ -611,6 +616,7 @@
                         e.stopPropagation();
                         if (gameRunning) {
                             handleAction(action);
+                            e.handled = true;
                         }
                     }, { passive: false });
                     
@@ -634,7 +640,7 @@
 
         function handleTouchStart(e) {
             e.preventDefault();
-            if (!gameRunning) return;
+            if (!gameRunning || e.handled) return;
             
             const touch = e.touches[0];
             touchStartX = touch.clientX;
@@ -1372,3 +1378,4 @@
     </script>
 </body>
 </html>
+
