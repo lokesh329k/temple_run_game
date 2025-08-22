@@ -266,11 +266,11 @@
             100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
         }
 
-        /* Touch zones for mobile */
+        /* Touch zones for mobile - now more subtle */
         .touch-zone {
             position: absolute;
             pointer-events: all;
-            opacity: 0;
+            opacity: 0.05;
             z-index: 50;
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.2);
@@ -304,13 +304,27 @@
             height: 40%; 
         }
 
-        /* Show touch zones on mobile for better UX */
+        /* Control instruction overlay */
+        .control-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 75;
+            animation: fadeInOut 4s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            20%, 80% { opacity: 1; }
+        }
+
         @media (max-width: 768px) {
-            .touch-zone { 
-                opacity: 0.1; 
-            }
-            
-            /* Improve mobile layout */
             .characters {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 15px;
@@ -369,9 +383,8 @@
             
             <div class="controls-info">
                 <h3>📱 Mobile Controls:</h3>
-                <p>👈👉 Tap sides to move</p>
-                <p>👆 Tap top to jump</p>
-                <p>👇 Tap bottom to slide</p>
+                <p>👈👉 Swipe or tap sides to move</p>
+                <p>👆👇 Swipe up/down or tap areas</p>
                 <h3>⌨️ Desktop: WASD keys</h3>
                 <h3>🎯 Power-ups:</h3>
                 <p>🧲 Magnet • 🛡️ Shield • ⚡ Speed • 🌟 Star</p>
@@ -387,6 +400,11 @@
         <div class="touch-zone" id="rightZone"></div>
         <div class="touch-zone" id="jumpZone"></div>
         <div class="touch-zone" id="slideZone"></div>
+        
+        <!-- Control hint -->
+        <div class="control-hint" id="controlHint" style="display: none;">
+            Swipe or tap to control your runner!
+        </div>
         
         <div id="ui">
             <div class="ui-panel">
@@ -420,7 +438,6 @@
         function initAudio() {
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                // Resume audio context on first user interaction
                 const resumeAudio = () => {
                     if (audioContext && audioContext.state === 'suspended') {
                         audioContext.resume();
@@ -478,6 +495,15 @@
         let combo = 0;
         let maxCombo = 0;
         let selectedCharacter = 'runner';
+
+        // Touch tracking for swipe detection
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        let isTracking = false;
+        const MIN_SWIPE_DISTANCE = 30;
+        const MAX_TAP_TIME = 200;
+        const MAX_TAP_DISTANCE = 20;
 
         // Lane positions
         let lanes = [0, 0, 0];
@@ -580,7 +606,7 @@
             document.getElementById('characterPreview').textContent = char.emoji;
         }
 
-        // Simplified touch handling
+        // Action handler
         function handleAction(action) {
             if (!gameRunning) return;
             
@@ -620,12 +646,99 @@
             }
         }
 
+        // Enhanced touch handling with both tap zones and swipe detection
         function setupTouchControls() {
-            // Prevent default behaviors on game canvas
+            // Prevent default behaviors
             canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
             canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+            canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
 
-            // Simple touch zone handling
+            // Global touch handlers for swipe detection
+            let globalTouchHandler = {
+                handleStart: function(e) {
+                    if (e.touches && e.touches.length > 0) {
+                        const touch = e.touches[0];
+                        touchStartX = touch.clientX;
+                        touchStartY = touch.clientY;
+                        touchStartTime = Date.now();
+                        isTracking = true;
+                    }
+                },
+                
+                handleEnd: function(e) {
+                    if (!isTracking || !gameRunning) {
+                        isTracking = false;
+                        return;
+                    }
+                    
+                    const touch = e.changedTouches ? e.changedTouches[0] : null;
+                    if (!touch) {
+                        isTracking = false;
+                        return;
+                    }
+                    
+                    const touchEndX = touch.clientX;
+                    const touchEndY = touch.clientY;
+                    const touchEndTime = Date.now();
+                    
+                    const deltaX = touchEndX - touchStartX;
+                    const deltaY = touchEndY - touchStartY;
+                    const deltaTime = touchEndTime - touchStartTime;
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    
+                    // Determine if it's a tap or swipe
+                    const isTap = distance < MAX_TAP_DISTANCE && deltaTime < MAX_TAP_TIME;
+                    const isSwipe = distance > MIN_SWIPE_DISTANCE;
+                    
+                    if (isSwipe) {
+                        // Handle swipe gestures
+                        const absX = Math.abs(deltaX);
+                        const absY = Math.abs(deltaY);
+                        
+                        if (absX > absY) {
+                            // Horizontal swipe
+                            if (deltaX > 0) {
+                                handleAction('right');
+                            } else {
+                                handleAction('left');
+                            }
+                        } else {
+                            // Vertical swipe
+                            if (deltaY < 0) {
+                                handleAction('jump');
+                            } else {
+                                handleAction('slide');
+                            }
+                        }
+                    } else if (isTap) {
+                        // Handle tap zones
+                        const canvasRect = canvas.getBoundingClientRect();
+                        const canvasX = touchStartX - canvasRect.left;
+                        const canvasY = touchStartY - canvasRect.top;
+                        const canvasWidth = canvasRect.width;
+                        const canvasHeight = canvasRect.height;
+                        
+                        // Determine which zone was tapped
+                        if (canvasX < canvasWidth * 0.25) {
+                            handleAction('left');
+                        } else if (canvasX > canvasWidth * 0.75) {
+                            handleAction('right');
+                        } else if (canvasY < canvasHeight * 0.4) {
+                            handleAction('jump');
+                        } else if (canvasY > canvasHeight * 0.6) {
+                            handleAction('slide');
+                        }
+                    }
+                    
+                    isTracking = false;
+                }
+            };
+
+            // Add global touch event listeners
+            canvas.addEventListener('touchstart', globalTouchHandler.handleStart, { passive: false });
+            canvas.addEventListener('touchend', globalTouchHandler.handleEnd, { passive: false });
+
+            // Keep zone-based handlers as backup/alternative
             const zones = [
                 { id: 'leftZone', action: 'left' },
                 { id: 'rightZone', action: 'right' },
@@ -636,16 +749,7 @@
             zones.forEach(({ id, action }) => {
                 const zone = document.getElementById(id);
                 if (zone) {
-                    // Touch start for mobile
-                    zone.addEventListener('touchstart', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (gameRunning) {
-                            handleAction(action);
-                        }
-                    }, { passive: false });
-                    
-                    // Click for desktop
+                    // Click for desktop/testing
                     zone.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -654,14 +758,11 @@
                         }
                     });
 
-                    // Visual feedback
-                    zone.addEventListener('touchstart', () => {
+                    // Visual feedback for touch zones
+                    zone.addEventListener('touchstart', (e) => {
                         zone.style.backgroundColor = 'rgba(255,255,255,0.3)';
-                    }, { passive: false });
-                    
-                    zone.addEventListener('touchend', () => {
                         setTimeout(() => {
-                            zone.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                            zone.style.backgroundColor = 'rgba(255,255,255,0.05)';
                         }, 150);
                     }, { passive: false });
                 }
@@ -697,12 +798,20 @@
             player.x = lanes[1];
             player.y = canvas.clientHeight - player.height - 50;
             
+            // Show control hint for first few seconds
+            const hint = document.getElementById('controlHint');
+            hint.style.display = 'block';
+            setTimeout(() => {
+                hint.style.display = 'none';
+            }, 4000);
+            
             playSound(880, 0.3);
         }
 
         function showStartScreen() {
             document.getElementById('startScreen').style.display = 'flex';
             document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('controlHint').style.display = 'none';
             gameStarted = false;
             gameRunning = false;
         }
