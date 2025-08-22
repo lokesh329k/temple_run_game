@@ -153,7 +153,7 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             font-weight: bold;
-            min-height: 48px; /* Better touch target */
+            min-height: 48px;
         }
 
         button:hover, button:active {
@@ -266,48 +266,48 @@
             100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
         }
 
-        /* Touch zones for mobile - make them visible for debugging */
+        /* Touch zones for mobile */
         .touch-zone {
             position: absolute;
             pointer-events: all;
             opacity: 0;
             z-index: 50;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
         #leftZone { 
             left: 0; 
             top: 0; 
             width: 25%; 
-            height: 60%; 
+            height: 70%; 
         }
         
         #rightZone { 
             right: 0; 
             top: 0; 
             width: 25%; 
-            height: 60%; 
+            height: 70%; 
         }
         
         #jumpZone { 
             left: 25%; 
             top: 0; 
             width: 50%; 
-            height: 35%; 
+            height: 40%; 
         }
         
         #slideZone { 
             left: 25%; 
-            bottom: 40%; 
+            bottom: 30%; 
             width: 50%; 
-            height: 25%; 
+            height: 40%; 
         }
 
         /* Show touch zones on mobile for better UX */
         @media (max-width: 768px) {
             .touch-zone { 
-                opacity: 0.05; 
-                background: rgba(255,255,255,0.1); 
-                border: 1px solid rgba(255,255,255,0.2);
+                opacity: 0.1; 
             }
             
             /* Improve mobile layout */
@@ -369,9 +369,9 @@
             
             <div class="controls-info">
                 <h3>📱 Mobile Controls:</h3>
-                <p>👈👉 Swipe or tap sides to move</p>
-                <p>👆 Swipe/tap top to jump</p>
-                <p>👇 Swipe/tap bottom to slide</p>
+                <p>👈👉 Tap sides to move</p>
+                <p>👆 Tap top to jump</p>
+                <p>👇 Tap bottom to slide</p>
                 <h3>⌨️ Desktop: WASD keys</h3>
                 <h3>🎯 Power-ups:</h3>
                 <p>🧲 Magnet • 🛡️ Shield • ⚡ Speed • 🌟 Star</p>
@@ -383,10 +383,10 @@
         <canvas id="gameCanvas"></canvas>
         
         <!-- Touch Control Zones -->
-        <div class="touch-zone" id="leftZone" title="Move Left"></div>
-        <div class="touch-zone" id="rightZone" title="Move Right"></div>
-        <div class="touch-zone" id="jumpZone" title="Jump"></div>
-        <div class="touch-zone" id="slideZone" title="Slide"></div>
+        <div class="touch-zone" id="leftZone"></div>
+        <div class="touch-zone" id="rightZone"></div>
+        <div class="touch-zone" id="jumpZone"></div>
+        <div class="touch-zone" id="slideZone"></div>
         
         <div id="ui">
             <div class="ui-panel">
@@ -532,18 +532,14 @@
             canvas.width = rect.width * dpr;
             canvas.height = rect.height * dpr;
             
-            // Scale the context to match device pixel ratio
             ctx.scale(dpr, dpr);
             
-            // Set CSS size
             canvas.style.width = rect.width + 'px';
             canvas.style.height = rect.height + 'px';
 
-            // Store the actual display dimensions for touch calculations
-canvas.displayWidth = rect.width;
-canvas.displayHeight = rect.height;
+            canvas.displayWidth = rect.width;
+            canvas.displayHeight = rect.height;
             
-            // Update lane positions based on actual canvas size
             const canvasWidth = rect.width;
             lanes[0] = canvasWidth / 2 - 80;
             lanes[1] = canvasWidth / 2;
@@ -554,7 +550,6 @@ canvas.displayHeight = rect.height;
             }
         }
 
-        // Initialize
         resizeCanvas();
 
         // Initialize ground lines
@@ -585,110 +580,7 @@ canvas.displayHeight = rect.height;
             document.getElementById('characterPreview').textContent = char.emoji;
         }
 
-        // Touch and swipe handling
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchStartTime = 0;
-        const minSwipeDistance = 50;
-        const maxSwipeTime = 500;
-
-        function setupTouchControls() {
-            // Prevent default touch behaviors
-            // Only prevent default on the game canvas area, not globally
-canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
-
-            // Zone tapping
-            const zones = [
-                { id: 'leftZone', action: 'left' },
-                { id: 'rightZone', action: 'right' },
-                { id: 'jumpZone', action: 'jump' },
-                { id: 'slideZone', action: 'slide' }
-            ];
-            
-            zones.forEach(({ id, action }) => {
-                const zone = document.getElementById(id);
-                if (zone) {
-                    // Touch events for mobile
-                    zone.addEventListener('touchstart', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (gameRunning) {
-                            handleAction(action);
-                            e.handled = true;
-                        }
-                    }, { passive: false });
-                    
-                    // Click events for desktop/testing
-                    zone.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        if (gameRunning) {
-                            handleAction(action);
-                        }
-                    });
-                }
-            });
-
-            // Main swipe detection
-            const gameContainer = document.getElementById('gameContainer');
-            
-            gameContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-            gameContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-            gameContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-        }
-
-        function handleTouchStart(e) {
-            e.preventDefault();
-            if (!gameRunning || e.handled) return;
-            
-            const touch = e.touches[0];
-            touchStartX = touch.clientX;
-            touchStartY = touch.clientY;
-            touchStartTime = Date.now();
-        }
-
-        function handleTouchMove(e) {
-            e.preventDefault();
-        }
-
-        function handleTouchEnd(e) {
-            e.preventDefault();
-            if (!gameRunning) return;
-            
-            const touch = e.changedTouches[0];
-            const touchEndX = touch.clientX;
-            const touchEndY = touch.clientY;
-            const touchEndTime = Date.now();
-            
-            const deltaX = touchEndX - touchStartX;
-            const deltaY = touchEndY - touchStartY;
-            const deltaTime = touchEndTime - touchStartTime;
-            
-            // Check if it's a valid swipe
-            if (deltaTime > maxSwipeTime) return;
-            
-            const absDeltaX = Math.abs(deltaX);
-            const absDeltaY = Math.abs(deltaY);
-            
-            // Horizontal swipes
-            if (absDeltaX > absDeltaY && absDeltaX > minSwipeDistance) {
-                if (deltaX > 0) {
-                    handleAction('right');
-                } else {
-                    handleAction('left');
-                }
-            }
-            // Vertical swipes
-            else if (absDeltaY > absDeltaX && absDeltaY > minSwipeDistance) {
-                if (deltaY < 0) {
-                    handleAction('jump');
-                } else {
-                    handleAction('slide');
-                }
-            }
-        }
-
+        // Simplified touch handling
         function handleAction(action) {
             if (!gameRunning) return;
             
@@ -726,6 +618,54 @@ canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false 
                     }
                     break;
             }
+        }
+
+        function setupTouchControls() {
+            // Prevent default behaviors on game canvas
+            canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+            canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+            // Simple touch zone handling
+            const zones = [
+                { id: 'leftZone', action: 'left' },
+                { id: 'rightZone', action: 'right' },
+                { id: 'jumpZone', action: 'jump' },
+                { id: 'slideZone', action: 'slide' }
+            ];
+            
+            zones.forEach(({ id, action }) => {
+                const zone = document.getElementById(id);
+                if (zone) {
+                    // Touch start for mobile
+                    zone.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (gameRunning) {
+                            handleAction(action);
+                        }
+                    }, { passive: false });
+                    
+                    // Click for desktop
+                    zone.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (gameRunning) {
+                            handleAction(action);
+                        }
+                    });
+
+                    // Visual feedback
+                    zone.addEventListener('touchstart', () => {
+                        zone.style.backgroundColor = 'rgba(255,255,255,0.3)';
+                    }, { passive: false });
+                    
+                    zone.addEventListener('touchend', () => {
+                        setTimeout(() => {
+                            zone.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                        }, 150);
+                    }, { passive: false });
+                }
+            });
         }
 
         // Keyboard controls
@@ -1378,4 +1318,3 @@ canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false 
     </script>
 </body>
 </html>
-
