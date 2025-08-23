@@ -610,10 +610,12 @@ ctx.fill();
 
         // Game arrays
         let obstacles = [];
+		let trees = [];
         let coinObjects = [];
         let powerUpObjects = [];
         let particles = [];
         let groundLines = [];
+		let groundTiles = [];
 
         // Power-up system
         let activePowerUps = [];
@@ -664,7 +666,7 @@ ctx.fill();
             }
         }
 
-        initGroundLines();
+        initGroundTiles();
 
         // Character selection
         function selectCharacter(charType) {
@@ -718,6 +720,56 @@ ctx.fill();
                     break;
             }
         }
+		
+		function initGroundTiles() {
+			groundTiles = [];
+			const tileHeight = 60;
+			for (let i = 0; i < canvas.clientHeight / tileHeight + 2; i++) {
+				groundTiles.push({
+					y: i * tileHeight,
+					height: tileHeight
+				});
+			}
+		}
+		
+		function updateGround() {
+			groundTiles.forEach(tile => {
+				tile.y += speed;
+			});
+
+			// Recycle tiles when they go off screen
+			const tileHeight = groundTiles[0].height;
+			if (groundTiles[0].y > canvas.clientHeight) {
+				groundTiles.shift(); // remove first
+				groundTiles.push({
+					y: groundTiles[groundTiles.length - 1].y - tileHeight,
+					height: tileHeight
+				});
+			}
+		}
+		
+		function renderGround() {
+			const canvasWidth = canvas.clientWidth;
+
+			groundTiles.forEach((tile, i) => {
+				ctx.fillStyle = i % 2 === 0 ? "#3E2723" : "#4E342E"; // alternating dark browns
+				ctx.fillRect(0, tile.y, canvasWidth, tile.height);
+
+				// Add yellow lane markers
+				ctx.strokeStyle = "#FFD700";
+				ctx.lineWidth = 4;
+				ctx.beginPath();
+				ctx.moveTo(canvasWidth / 2 - 70, tile.y);
+				ctx.lineTo(canvasWidth / 2 - 70, tile.y + tile.height);
+				ctx.stroke();
+
+				ctx.beginPath();
+				ctx.moveTo(canvasWidth / 2 + 70, tile.y);
+				ctx.lineTo(canvasWidth / 2 + 70, tile.y + tile.height);
+				ctx.stroke();
+			});
+		}
+
 
         // Enhanced touch handling with both tap zones and swipe detection
         function setupTouchControls() {
@@ -913,7 +965,7 @@ ctx.fill();
             player.speedBoost = false;
             player.color = char.color;
             
-            initGroundLines();
+            initGroundTiles();
         }
 
         function restartGame() {
@@ -936,6 +988,22 @@ ctx.fill();
                 type: types[Math.floor(Math.random() * types.length)]
             });
         }
+		
+		function createTree(side, y) {
+			const typeChance = Math.random();
+
+			let type = "tree";
+			if (typeChance < 0.15) type = "bush";      // 15% chance bush
+			else if (typeChance < 0.25) type = "rock"; // 10% chance rock
+
+			trees.push({
+				x: side === "left" ? getLaneX(0, y) - 120 : getLaneX(2, y) + 120,
+				y: y || -100,
+				type: type,
+				size: 30 + Math.random() * 30,
+				color: ["#228B22", "#006400", "#32CD32"][Math.floor(Math.random() * 3)]
+			});
+		}
 
         function createCoin() {
             const lane = Math.floor(Math.random() * 3);
@@ -1029,6 +1097,20 @@ ctx.fill();
                 powerUpDiv.appendChild(indicator);
             });
         }
+		
+		function updateTrees() {
+			trees.forEach((tree, index) => {
+				tree.y += speed;
+				if (tree.y > canvas.clientHeight) {
+					trees.splice(index, 1);
+				}
+			});
+
+			// Randomly spawn trees
+			if (Math.random() < 0.02) {
+				createTree();
+			}
+		}
 
         function showCombo(value) {
             const comboDiv = document.getElementById('comboDisplay');
@@ -1050,7 +1132,7 @@ ctx.fill();
             if (frameCount % 400 === 0) {
                 speed += 0.3;
             }
-
+			updateGround();
             // Update power-ups
             activePowerUps = activePowerUps.filter(powerUp => {
                 if (Date.now() > powerUp.endTime) {
@@ -1192,30 +1274,69 @@ ctx.fill();
                 particle.vy *= 0.98;
                 return particle.life > 0;
             });
-
+			updateTrees();
             // Update UI
             document.getElementById('score').textContent = score;
             document.getElementById('coins').textContent = coins;
             document.getElementById('speed').textContent = speed.toFixed(1);
             document.getElementById('combo').textContent = combo;
-        }
+        }	
 
-        function checkCollision(obj1, obj2) {
-            const buffer = 8;
-            
-            let playerY = obj1.y - obj1.jumpHeight;
-            let playerHeight = obj1.height;
-            
-            if (obj1.isSliding) {
-                playerY += obj1.height / 2;
-                playerHeight = obj1.height / 2;
-            }
-            
-            return obj1.x < obj2.x + obj2.width - buffer &&
-                   obj1.x + obj1.width > obj2.x + buffer &&
-                   playerY < obj2.y + obj2.height - buffer &&
-                   playerY + playerHeight > obj2.y + buffer;
-        }
+        function checkCollision(player, obj) {
+			const buffer = 8;
+
+			// Handle player Y and height (jumping/sliding)
+			let playerY = player.y - player.jumpHeight;
+			let playerHeight = player.height;
+
+			if (player.isSliding) {
+				playerY += player.height / 2;
+				playerHeight = player.height / 2;
+			}
+
+			// Scale obstacle/coin/power-up with perspective
+			const scale = getScale(obj.y);
+			const objWidth = obj.width * scale;
+			const objHeight = obj.height * scale;
+
+			// Collision check (AABB with buffer)
+			return (
+				player.x < obj.x + objWidth - buffer &&
+				player.x + player.width > obj.x + buffer &&
+				playerY < obj.y + objHeight - buffer &&
+				playerY + playerHeight > obj.y + buffer
+			);
+		}
+		
+		function renderTrees() {
+			trees.forEach(tree => {
+				const scale = getScale(tree.y);
+				const size = tree.size * scale;
+
+				if (tree.type === "tree") {
+					// Canopy
+					ctx.fillStyle = tree.color;
+					ctx.beginPath();
+					ctx.arc(tree.x, tree.y, size, 0, Math.PI * 2);
+					ctx.fill();
+					// Trunk
+					ctx.fillStyle = "#8B4513";
+					ctx.fillRect(tree.x - size * 0.15, tree.y, size * 0.3, size * 1.2);
+
+				} else if (tree.type === "bush") {
+					ctx.fillStyle = tree.color;
+					ctx.beginPath();
+					ctx.ellipse(tree.x, tree.y, size * 1.2, size * 0.6, 0, 0, Math.PI * 2);
+					ctx.fill();
+
+				} else if (tree.type === "rock") {
+					ctx.fillStyle = "#555";
+					ctx.beginPath();
+					ctx.ellipse(tree.x, tree.y, size, size * 0.7, 0, 0, Math.PI * 2);
+					ctx.fill();
+				}
+			});
+		}
 
         function render() {
 			const canvasWidth = canvas.clientWidth;
@@ -1244,7 +1365,10 @@ ctx.fill();
 				ctx.stroke();
 			}
 			ctx.setLineDash([]);
-
+			
+			ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+			renderGround();   // <-- scrolling road
+			renderTrees();    // <-- trees at sides
 
 			// Obstacles with 3D
 			obstacles.forEach(obstacle => {
@@ -1359,7 +1483,7 @@ ctx.fill();
         setupTouchControls();
         window.addEventListener('resize', () => {
             resizeCanvas();
-            initGroundLines();
+            initGroundTiles();
         });
         
         // Start game loop
