@@ -431,6 +431,79 @@
     </div>
 
     <script>
+	// --- 3D Perspective Helpers ---
+		function projectToPseudo3D(x, y, width, height) {
+			const perspective = 0.0015;
+			const scale = 1 + y * perspective;
+			return {
+				x: x * scale,
+				y: y * scale,
+				width: width * scale,
+				height: height * scale
+			};
+		}
+		function drawBlock3D(ctx, obstacle) {
+			const depth = 15;
+			const o = obstacle;
+			ctx.fillStyle = "#8B4513";
+ctx.fillRect(o.x - o.width/2, o.y, o.width, o.height);
+
+
+ctx.fillStyle = "#A0522D";
+ctx.beginPath();
+ctx.moveTo(o.x - o.width/2, o.y);
+ctx.lineTo(o.x - o.width/2 + depth, o.y - depth);
+ctx.lineTo(o.x + o.width/2 + depth, o.y - depth);
+ctx.lineTo(o.x + o.width/2, o.y);
+ctx.closePath();
+ctx.fill();
+
+
+ctx.fillStyle = "#5C3317";
+ctx.beginPath();
+ctx.moveTo(o.x + o.width/2, o.y);
+ctx.lineTo(o.x + o.width/2 + depth, o.y - depth);
+ctx.lineTo(o.x + o.width/2 + depth, o.y + o.height - depth);
+ctx.lineTo(o.x + o.width/2, o.y + o.height);
+ctx.closePath();
+ctx.fill();
+}
+
+
+function drawBarrier3D(ctx, obstacle) {
+const barHeight = obstacle.height;
+ctx.fillStyle = "#555";
+ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y, obstacle.width, 10);
+
+
+ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y, 10, barHeight);
+ctx.fillRect(obstacle.x + obstacle.width/2 - 10, obstacle.y, 10, barHeight);
+
+
+ctx.fillStyle = "#FF0000";
+ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y + 15, obstacle.width, 5);
+}
+
+
+function drawSpike3D(ctx, obstacle) {
+const baseWidth = obstacle.width;
+const height = obstacle.height;
+const gradient = ctx.createLinearGradient(
+obstacle.x, obstacle.y,
+obstacle.x, obstacle.y + height
+);
+gradient.addColorStop(0, '#FF6B6B');
+gradient.addColorStop(1, '#FF4444');
+
+
+ctx.fillStyle = gradient;
+ctx.beginPath();
+ctx.moveTo(obstacle.x, obstacle.y);
+ctx.lineTo(obstacle.x - baseWidth/2, obstacle.y + height);
+ctx.lineTo(obstacle.x + baseWidth/2, obstacle.y + height);
+ctx.closePath();
+ctx.fill();
+}
         // Audio Context for sound effects
         let audioContext;
         let soundEnabled = true;
@@ -1145,257 +1218,124 @@
         }
 
         function render() {
-            const canvasWidth = canvas.clientWidth;
-            const canvasHeight = canvas.clientHeight;
-            
-            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+			const canvasWidth = canvas.clientWidth;
+			const canvasHeight = canvas.clientHeight;
+			ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-            // Draw ground lines
-            ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 3;
-            groundLines.forEach(line => {
-                ctx.beginPath();
-                ctx.moveTo(line.x, line.y);
-                ctx.lineTo(line.x + line.width, line.y);
-                ctx.stroke();
-            });
 
-            // Draw lane markers
-            ctx.strokeStyle = '#FFFF00';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([15, 15]);
-            for (let i = 0; i < 3; i++) {
-                ctx.beginPath();
-                ctx.moveTo(lanes[i] - 35, 0);
-                ctx.lineTo(lanes[i] - 35, canvasHeight);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(lanes[i] + 35, 0);
-                ctx.lineTo(lanes[i] + 35, canvasHeight);
-                ctx.stroke();
-            }
-            ctx.setLineDash([]);
+			// Ground perspective
+			const horizonY = canvasHeight * 0.2;
+			const groundGradient = ctx.createLinearGradient(0, horizonY, 0, canvasHeight);
+			groundGradient.addColorStop(0, '#2e8b57');
+			groundGradient.addColorStop(1, '#013220');
+			ctx.fillStyle = groundGradient;
+			ctx.fillRect(0, horizonY, canvasWidth, canvasHeight - horizonY);
 
-            // Draw obstacles
-            obstacles.forEach(obstacle => {
-                ctx.save();
-                
-                if (obstacle.type === 'block') {
-                    const gradient = ctx.createLinearGradient(
-                        obstacle.x - obstacle.width/2, obstacle.y,
-                        obstacle.x + obstacle.width/2, obstacle.y + obstacle.height
-                    );
-                    gradient.addColorStop(0, '#A0522D');
-                    gradient.addColorStop(0.5, '#8B4513');
-                    gradient.addColorStop(1, '#654321');
-                    
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y, obstacle.width, obstacle.height);
-                    
-                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                    ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y, obstacle.width, 5);
-                    ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y, 3, obstacle.height);
-                    
-                } else if (obstacle.type === 'spike') {
-                    const gradient = ctx.createLinearGradient(
-                        obstacle.x, obstacle.y,
-                        obstacle.x, obstacle.y + obstacle.height
-                    );
-                    gradient.addColorStop(0, '#FF6B6B');
-                    gradient.addColorStop(1, '#FF4444');
-                    
-                    ctx.fillStyle = gradient;
-                    ctx.beginPath();
-                    ctx.moveTo(obstacle.x, obstacle.y);
-                    ctx.lineTo(obstacle.x - obstacle.width/2, obstacle.y + obstacle.height);
-                    ctx.lineTo(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-                    ctx.beginPath();
-                    ctx.moveTo(obstacle.x, obstacle.y);
-                    ctx.lineTo(obstacle.x - obstacle.width/4, obstacle.y + obstacle.height/2);
-                    ctx.lineTo(obstacle.x, obstacle.y + obstacle.height/3);
-                    ctx.fill();
-                    
-                } else if (obstacle.type === 'barrier') {
-                    ctx.fillStyle = '#666666';
-                    ctx.fillRect(obstacle.x - obstacle.width/2, obstacle.y, obstacle.width, obstacle.height);
-                    
-                    ctx.fillStyle = '#FF0000';
-                    for (let i = 0; i < 3; i++) {
-                        ctx.fillRect(
-                            obstacle.x - obstacle.width/2 + 5, 
-                            obstacle.y + i * (obstacle.height/3) + 5,
-                            obstacle.width - 10, 
-                            5
-                        );
-                    }
-                }
-                
-                ctx.restore();
-            });
 
-            // Draw coins
-            coinObjects.forEach(coin => {
-                if (!coin.collected) {
-                    ctx.save();
-                    ctx.translate(coin.x, coin.y + coin.height/2);
-                    ctx.rotate(coin.rotation);
-                    
-                    const coinGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, coin.width/2);
-                    if (coin.special) {
-                        coinGradient.addColorStop(0, '#FFD700');
-                        coinGradient.addColorStop(0.7, '#FF9800');
-                        coinGradient.addColorStop(1, '#F57C00');
-                    } else {
-                        coinGradient.addColorStop(0, '#FFD700');
-                        coinGradient.addColorStop(0.7, '#FFC107');
-                        coinGradient.addColorStop(1, '#FF8F00');
-                    }
-                    
-                    ctx.fillStyle = coinGradient;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, coin.width/2, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-                    ctx.beginPath();
-                    ctx.arc(-coin.width/4, -coin.width/4, coin.width/5, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    if (coin.special) {
-                        ctx.strokeStyle = '#FF9800';
-                        ctx.lineWidth = 2;
-                        ctx.setLineDash([5, 5]);
-                        ctx.beginPath();
-                        ctx.arc(0, 0, coin.width/2 + 5, 0, Math.PI * 2);
-                        ctx.stroke();
-                        ctx.setLineDash([]);
-                    }
-                    
-                    ctx.restore();
-                }
-            });
+			// Perspective lane markers
+			ctx.strokeStyle = '#FFFF00';
+			ctx.lineWidth = 2;
+			ctx.setLineDash([20, 20]);
+			for (let i = 0; i < 3; i++) {
+				const offset = (i - 1) * 100;
+				ctx.beginPath();
+				ctx.moveTo(lanes[i], horizonY);
+				ctx.lineTo(lanes[i] + offset * 0.3, canvasHeight);
+				ctx.stroke();
+			}
+			ctx.setLineDash([]);
 
-            // Draw power-ups
-            powerUpObjects.forEach(powerUp => {
-                if (!powerUp.collected) {
-                    ctx.save();
-                    
-                    const pulseScale = 1 + Math.sin(powerUp.pulse * 2) * 0.1;
-                    ctx.translate(powerUp.x, powerUp.y + powerUp.height/2);
-                    ctx.scale(pulseScale, pulseScale);
-                    
-                    const glowGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, powerUp.width);
-                    glowGradient.addColorStop(0, powerUp.color + '80');
-                    glowGradient.addColorStop(1, powerUp.color + '00');
-                    
-                    ctx.fillStyle = glowGradient;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, powerUp.width, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = powerUp.color;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, powerUp.width/2.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = 'white';
-                    ctx.font = '16px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(powerUp.emoji, 0, 0);
-                    
-                    ctx.restore();
-                }
-            });
 
-            // Draw particles
-            particles.forEach(particle => {
-                ctx.save();
-                ctx.globalAlpha = particle.life;
-                ctx.fillStyle = particle.color;
-                ctx.beginPath();
-                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            });
+			// Obstacles with 3D
+			obstacles.forEach(obstacle => {
+				ctx.save();
+				if (obstacle.type === 'block') {
+					drawBlock3D(ctx, obstacle);
+				} else if (obstacle.type === 'spike') {
+					drawSpike3D(ctx, obstacle);
+				} else if (obstacle.type === 'barrier') {
+					drawBarrier3D(ctx, obstacle);
+				}
+				ctx.restore();
+			});
 
-            // Draw player
-            const char = characters[selectedCharacter];
-            let playerY = player.y - player.jumpHeight;
-            let playerHeight = player.height;
-            
-            if (player.isSliding) {
-                playerY += player.height / 2;
-                playerHeight = player.height / 2;
-            }
-            
-            ctx.save();
-            
-            // Shield effect
-            if (player.invulnerable) {
-                const shieldGradient = ctx.createRadialGradient(
-                    player.x, playerY + playerHeight/2, 0,
-                    player.x, playerY + playerHeight/2, 40
-                );
-                shieldGradient.addColorStop(0, 'rgba(0,150,255,0.3)');
-                shieldGradient.addColorStop(1, 'rgba(0,150,255,0)');
-                
-                ctx.fillStyle = shieldGradient;
-                ctx.beginPath();
-                ctx.arc(player.x, playerY + playerHeight/2, 40, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            
-            // Magnet effect
-            if (player.magnetRange > 0) {
-                ctx.strokeStyle = 'rgba(255,64,129,0.4)';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-                ctx.beginPath();
-                ctx.arc(player.x, playerY + playerHeight/2, player.magnetRange, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-            
-            // Player body
-            const playerGradient = ctx.createLinearGradient(
-                player.x - player.width/2, playerY,
-                player.x + player.width/2, playerY + playerHeight
-            );
-            playerGradient.addColorStop(0, player.color);
-            playerGradient.addColorStop(1, player.color + 'DD');
-            
-            ctx.fillStyle = playerGradient;
-            ctx.fillRect(player.x - player.width/2, playerY, player.width, playerHeight);
-            
-            // Character emoji
-            ctx.font = '24px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(char.emoji, player.x, playerY + playerHeight/2);
-            
-            // Speed trail effect
-            if (player.speedBoost) {
-                ctx.save();
-                ctx.globalAlpha = 0.3;
-                for (let i = 1; i <= 3; i++) {
-                    ctx.fillStyle = player.color;
-                    ctx.fillRect(
-                        player.x - player.width/2,
-                        playerY + i * 15,
-                        player.width,
-                        playerHeight * 0.7
-                    );
-                }
-                ctx.restore();
-            }
-            
-            ctx.restore();
+
+			// Coins
+			coinObjects.forEach(coin => {
+				if (!coin.collected) {
+					ctx.save();
+					ctx.translate(coin.x, coin.y + coin.height/2);
+					ctx.rotate(coin.rotation);
+					const coinGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, coin.width/2);
+					coinGradient.addColorStop(0, '#FFD700');
+					coinGradient.addColorStop(0.7, '#FFC107');
+					coinGradient.addColorStop(1, '#FF8F00');
+					ctx.fillStyle = coinGradient;
+					ctx.beginPath();
+					ctx.arc(0, 0, coin.width/2, 0, Math.PI * 2);
+					ctx.fill();
+					ctx.restore();
+				}
+			});
+
+
+		// Powerups
+		powerUpObjects.forEach(powerUp => {
+			if (!powerUp.collected) {
+				ctx.save();
+				const pulseScale = 1 + Math.sin(powerUp.pulse * 2) * 0.1;
+				ctx.translate(powerUp.x, powerUp.y + powerUp.height/2);
+				ctx.scale(pulseScale, pulseScale);
+				ctx.fillStyle = powerUp.color;
+				ctx.beginPath();
+				ctx.arc(0, 0, powerUp.width/2.5, 0, Math.PI * 2);
+				ctx.fill();
+				ctx.fillStyle = 'white';
+				ctx.font = '16px Arial';
+				ctx.textAlign = 'center';
+				ctx.textBaseline = 'middle';
+				ctx.fillText(powerUp.emoji, 0, 0);
+				ctx.restore();
+			}
+		});
+
+
+		// Particles
+		particles.forEach(particle => {
+			ctx.save();
+			ctx.globalAlpha = particle.life;
+			ctx.fillStyle = particle.color;
+			ctx.beginPath();
+			ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.restore();
+		});
+
+
+		// Player with perspective shadow
+		const char = characters[selectedCharacter];
+		let playerY = player.y - player.jumpHeight;
+		let playerHeight = player.height;
+		if (player.isSliding) {
+			playerY += player.height / 2;
+			playerHeight = player.height / 2;
+		}
+		ctx.save();
+		ctx.fillStyle = player.color;
+		ctx.fillRect(player.x - player.width/2, playerY, player.width, playerHeight);
+		ctx.font = '24px Arial';
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText(char.emoji, player.x, playerY + playerHeight/2);
+
+
+		// Shadow
+		ctx.globalAlpha = 0.3;
+		ctx.fillStyle = 'black';
+		ctx.beginPath();
+		ctx.ellipse(player.x, canvasHeight - 30, player.width, 10, 0, 0, Math.PI * 2);
+		ctx.fill();
+		ctx.restore();
         }
 
         function gameOver() {
